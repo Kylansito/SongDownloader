@@ -1,0 +1,40 @@
+ # Node.js
+node_modules/
+npm-debug.log
+yarn-error.log
+.pnpm-debug.log
+
+# Build output
+/dist/
+/build/
+/public/css/
+/public/js/
+
+# TailwindCSS Generated Files
+.tailwindcss/
+
+# Logs
+logs
+*.log
+*.log.*
+
+# IDEs and Editor Directories
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# dotenv environment variable files
+.env
+.env.local
+.env.*.local
+
+# Next.js (if you're using it)
+.next/
+
+# SASS/SCSS cache folders
+.sass-cache/
