@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
-
 export default function Home() {
   const [url, setUrl] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -17,22 +16,47 @@ export default function Home() {
   };
 
   const downloadMp3 = async (youtubeUrl) => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 minute timeout
+
     try {
-        const response = await fetch(`http://localhost:5000/download?url=${encodeURIComponent(youtubeUrl)}`);
+      const response = await fetch(
+        `http://localhost:5000/download?url=${encodeURIComponent(youtubeUrl)}`,
+        { signal: controller.signal }
+      );
 
-        if (!response.ok) {
-            throw new Error("Error downloading MP3.");
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Error downloading MP3");
+      }
+
+      // Get filename from Content-Disposition header if available
+      const contentDisposition = response.headers.get('Content-Disposition');
+      let filename = 'audio.mp3';
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+        if (filenameMatch) {
+          filename = filenameMatch[1];
         }
+      }
 
-        const blob = await response.blob();
-        const link = document.createElement("a");
-        link.href = URL.createObjectURL(blob);
-        link.download = "audio.mp3";
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(link);
+      return true;
     } catch (error) {
-        setError(error.message);
+      if (error.name === 'AbortError') {
+        throw new Error('Download timed out. Please try again.');
+      }
+      throw error;
+    } finally {
+      clearTimeout(timeoutId);
     }
   };
 
@@ -48,34 +72,21 @@ export default function Home() {
 
     setIsLoading(true);
     try {
-  
-      // Get the YouTube URL from input (assuming you have a state or ref for it)
-      const youtubeUrl = url; 
-  
-      if (!youtubeUrl) {
-          throw new Error("Invalid YouTube URL");
-      }
-  
-      await downloadMp3(youtubeUrl);  // Call the function to download the MP3
-  
-      // Simulate additional processing time
-      await new Promise(resolve => setTimeout(resolve, 2000));
-  
+      await downloadMp3(url);
       setSuccess(true);
-      setUrl('');  // Clear input field
-      } catch (err) {
-          setError('Failed to process download. Please try again.');
-      } finally {
-          setIsLoading(false);
-      }
-  
+      setUrl('');
+    } catch (err) {
+      setError(err.message || 'Failed to process download. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-purple-100 to-indigo-100 flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-md bg-white rounded-xl shadow-lg p-8 space-y-6 transform transition-all duration-300 hover:shadow-xl">
         <div className="text-center space-y-2">
-          <h1 className="text-3xl font-bold text-gray-800 animate-fade-in">
+          <h1 className="text-3xl font-bold text-gray-800">
             YouTube Downloader
           </h1>
           <p className="text-gray-500">
@@ -115,14 +126,14 @@ export default function Home() {
           </div>
 
           {error && (
-            <Alert variant="destructive" className="animate-slide-down">
+            <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
 
           {success && (
-            <Alert className="bg-green-50 text-green-700 border-green-200 animate-slide-down">
+            <Alert className="bg-green-50 text-green-700 border-green-200">
               <CheckCircle2 className="h-4 w-4" />
               <AlertDescription>Download completed successfully!</AlertDescription>
             </Alert>
