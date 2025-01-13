@@ -4,6 +4,8 @@ npm-debug.log
 yarn-error.log
 .pnpm-debug.log
 
+*.exe
+
 # Build output
 /dist/
 /build/
